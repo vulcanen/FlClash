@@ -11,6 +11,12 @@ abstract mixin class CoreEventListener {
 
   void onRequest(TrackerInfo connection) {}
 
+  void onRequests(List<TrackerInfo> connections) {
+    for (final c in connections) {
+      onRequest(c);
+    }
+  }
+
   void onLoaded(String providerName) {}
 
   void onCrash(String message) {}
@@ -30,7 +36,19 @@ class CoreEventManager {
             listener.onDelay(Delay.fromJson(event.data));
             break;
           case CoreEventType.request:
-            listener.onRequest(TrackerInfo.fromJson(event.data));
+            final data = event.data;
+            if (data is List) {
+              listener.onRequests(
+                data
+                    .map(
+                      (e) =>
+                          TrackerInfo.fromJson(e as Map<String, dynamic>),
+                    )
+                    .toList(),
+              );
+            } else {
+              listener.onRequest(TrackerInfo.fromJson(data));
+            }
             break;
           case CoreEventType.loaded:
             listener.onLoaded(event.data);

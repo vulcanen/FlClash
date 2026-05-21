@@ -25,7 +25,6 @@ import (
 	"github.com/metacubex/mihomo/tunnel"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sync"
 )
 
@@ -33,7 +32,7 @@ var (
 	currentConfig *config.Config
 	version       = 0
 	isRunning     = false
-	runLock       sync.Mutex
+	runLock       sync.RWMutex
 	mBatch, _     = batch.New[bool](context.Background(), batch.WithConcurrencyNum[bool](50))
 )
 
@@ -236,7 +235,6 @@ func updateConfig(params *UpdateParams) {
 }
 
 func applyConfig(params *SetupParams) error {
-	runtime.GC()
 	runLock.Lock()
 	defer runLock.Unlock()
 	var err error

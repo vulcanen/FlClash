@@ -86,6 +86,12 @@ class _CoreContainerState extends ConsumerState<CoreManager>
   }
 
   @override
+  void onRequests(List<TrackerInfo> trackerInfos) {
+    if (trackerInfos.isEmpty) return;
+    ref.read(requestsProvider.notifier).addRequests(trackerInfos);
+  }
+
+  @override
   Future<void> onLoaded(String providerName) async {
     ref
         .read(providersProvider.notifier)

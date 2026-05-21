@@ -26,6 +26,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -33,6 +34,8 @@ var (
 	isInit            = false
 	externalProviders = map[string]cp.Provider{}
 	logSubscriber     observable.Subscription[log.Event]
+	requestBufMu      sync.Mutex
+	requestBuf        []statistic.Tracker
 )
 
 func handleInitClash(paramsString string) bool {
@@ -97,8 +100,8 @@ func handleValidateConfig(path string) string {
 }
 
 func handleGetProxies() ProxiesData {
-	runLock.Lock()
-	defer runLock.Unlock()
+	runLock.RLock()
+	defer runLock.RUnlock()
 
 	nameList := config.GetProxyNameList()
 
@@ -270,8 +273,8 @@ func handleAsyncTestDelay(paramsString string, fn func(string)) {
 }
 
 func handleGetConnections() string {
-	runLock.Lock()
-	defer runLock.Unlock()
+	runLock.RLock()
+	defer runLock.RUnlock()
 	snapshot := statistic.DefaultManager.Snapshot()
 	data, err := json.Marshal(snapshot)
 	if err != nil {
@@ -339,8 +342,8 @@ func handleGetExternalProviders() string {
 }
 
 func handleGetExternalProvider(externalProviderName string) string {
-	runLock.Lock()
-	defer runLock.Unlock()
+	runLock.RLock()
+	defer runLock.RUnlock()
 	externalProvider, exist := externalProviders[externalProviderName]
 	if !exist {
 		return ""
@@ -461,8 +464,8 @@ func handleStopLog() {
 
 func handleGetCountryCode(ip string, fn func(value string)) {
 	go func() {
-		runLock.Lock()
-		defer runLock.Unlock()
+		runLock.RLock()
+		defer runLock.RUnlock()
 		codes := mmdb.IPInstance().LookupCode(net.ParseIP(ip))
 		if len(codes) == 0 {
 			fn("")
@@ -566,11 +569,28 @@ func init() {
 		})
 	}
 	statistic.DefaultRequestNotify = func(c statistic.Tracker) {
-		sendMessage(Message{
-			Type: RequestMessage,
-			Data: c,
-		})
+		requestBufMu.Lock()
+		requestBuf = append(requestBuf, c)
+		requestBufMu.Unlock()
 	}
+	go func() {
+		ticker := time.NewTicker(200 * time.Millisecond)
+		defer ticker.Stop()
+		for range ticker.C {
+			requestBufMu.Lock()
+			if len(requestBuf) == 0 {
+				requestBufMu.Unlock()
+				continue
+			}
+			batch := requestBuf
+			requestBuf = nil
+			requestBufMu.Unlock()
+			sendMessage(Message{
+				Type: RequestMessage,
+				Data: batch,
+			})
+		}
+	}()
 	executor.DefaultProviderLoadedHook = func(providerName string) {
 		sendMessage(Message{
 			Type: LoadedMessage,

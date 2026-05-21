@@ -53,7 +53,7 @@ class _ConnectionsViewState extends ConsumerState<ConnectionsView> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
         await _updateConnections();
-        timer = Timer(Duration(seconds: 1), () async {
+        timer = Timer(Duration(seconds: 2), () async {
           _updateConnectionsTask();
         });
       }

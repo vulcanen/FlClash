@@ -8,7 +8,12 @@ RUN_ID = os.getenv("RUN_ID")
 
 IS_STABLE = "-" not in TAG
 
-CHAT_ID = "@FlClash"
+CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+
+if not CHAT_ID:
+    print("TELEGRAM_CHAT_ID not set; skipping telegram notification.")
+    raise SystemExit(0)
+
 API_URL = f"http://localhost:8081/bot{TELEGRAM_BOT_TOKEN}/sendMediaGroup"
 
 DIST_DIR = os.path.join(os.getcwd(), "dist")
@@ -45,9 +50,9 @@ if TAG:
     text += f"\n**{TAG}**\n"
 
 if IS_STABLE:
-    text += f"\nhttps://github.com/chen08209/FlClash/releases/tag/{TAG}\n"
+    text += f"\nhttps://github.com/vulcanen/FlClash/releases/tag/{TAG}\n"
 else:
-    text += f"\nhttps://github.com/chen08209/FlClash/actions/runs/{RUN_ID}\n"
+    text += f"\nhttps://github.com/vulcanen/FlClash/actions/runs/{RUN_ID}\n"
 
 if os.path.exists(release):
     text += "\n"

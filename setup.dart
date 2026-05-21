@@ -150,10 +150,10 @@ class Build {
       runInShell: runInShell,
     );
     process.stdout.listen((data) {
-      print(utf8.decode(data));
+      print(systemEncoding.decode(data));
     });
     process.stderr.listen((data) {
-      print(utf8.decode(data));
+      print(systemEncoding.decode(data));
     });
     final exitCode = await process.exitCode;
     if (exitCode != 0 && name != null) throw '$name error';
